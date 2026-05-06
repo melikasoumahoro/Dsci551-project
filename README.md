@@ -1,4 +1,4 @@
-# PostgreSQL CMS — DSCI 551 Project
+# PostgreSQL CMS
 
 A Content Management System for blog posts making PostgreSQL's internal behavior observable and measurable through live explain analyze output
 
