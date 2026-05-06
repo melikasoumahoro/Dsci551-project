@@ -187,7 +187,7 @@ project_db.py
   └── commits and closes
 ```
 
-You do not need to upload or download any dataset file — running `python project_db.py` is sufficient to populate the database before starting the application
+You do not need to upload or download any dataset file, running `python project_db.py` is sufficient to populate the database before starting the application
 
 > **Note:** If you run `project_db.py` multiple times, it will insert an additional 100,000 rows each time. To reset the dataset:
 > ```bash
