@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PostgreSQL CMS — DSCI 551</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #fdf6ff;
+    --surface:   #ffffff;
+    --card:      #ffffff;
+    --border:    #ead5f5;
+    --accent:    #9b5de5;
+    --accent2:   #f15bb5;
+    --teal:      #00bbf9;
+    --mint:      #00f5d4;
+    --warn:      #e07a5f;
+    --muted:     #c3a8d8;
+    --text:      #2d1b4e;
+    --text-dim:  #8b6aaa;
+    --red:       #e05a6e;
+    --sans: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── LAYOUT ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 58px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 14px;
+  }
+  .topbar-logo {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--accent);
+  }
+  .topbar-logo span { color: var(--muted); font-weight: 400; }
+  .topbar-tag {
+    font-size: 10px;
+    background: #f3e8ff;
+    color: var(--accent);
+    border: 1px solid #d8b4fe;
+    padding: 2px 9px;
+    border-radius: 99px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .index-badge {
+    font-size: 11px;
+    padding: 4px 11px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all .2s;
+    font-weight: 500;
+  }
+  .index-badge.active { border-color: var(--accent); color: var(--accent); background: #f3e8ff; }
+  .index-badge:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sidebar-section {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 14px 20px 5px;
+    font-weight: 600;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 20px;
+    cursor: pointer;
+    color: var(--text-dim);
+    border-left: 2px solid transparent;
+    transition: all .15s;
+    font-size: 13px;
+    font-weight: 400;
+    border-radius: 0 6px 6px 0;
+    margin-right: 8px;
+  }
+  .nav-item:hover { color: var(--text); background: #fdf0ff; }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: #f3e8ff; font-weight: 500; }
+  .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+
+  /* ── MAIN ── */
+  .main {
+    overflow-y: auto;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── PANELS ── */
+  .panel { display: none; flex-direction: column; gap: 16px; }
+  .panel.active { display: flex; }
+
+  .panel-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.4px;
+  }
+  .panel-sub { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(155,93,229,.06);
+  }
+  .card-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  /* ── CONTROLS ── */
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+  input, select {
+    background: #fdf6ff;
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    min-width: 140px;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(155,93,229,.15); }
+
+  .btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+    font-weight: 600;
+  }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(155,93,229,.3); }
+  .btn-primary:hover { background: #7c3aed; box-shadow: 0 4px 12px rgba(155,93,229,.4); transform: translateY(-1px); }
+  .btn-secondary { background: #f9f0ff; border: 1.5px solid var(--border); color: var(--text-dim); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: #f3e8ff; }
+  .btn-warn { background: #fff4f0; border: 1.5px solid #f5cfc8; color: var(--warn); }
+  .btn-warn:hover { border-color: var(--warn); background: #ffe8e3; }
+  .btn-danger { background: #fff0f2; border: 1.5px solid #f9c0c8; color: var(--red); }
+  .btn-danger:hover { border-color: var(--red); background: #ffe3e7; }
+
+  .explain-toggle {
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; color: var(--text-dim); font-size: 12px; font-weight: 500;
+    padding: 8px 13px; border: 1.5px solid var(--border); border-radius: 8px;
+    transition: all .2s; user-select: none; background: #fdf6ff;
+  }
+  .explain-toggle.on { border-color: var(--accent); color: var(--accent); background: #f3e8ff; }
+
+  /* ── SPLIT ── */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 1100px) { .split { grid-template-columns: 1fr; } }
+
+  /* ── TABLE ── */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); padding: 8px 12px;
+    border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  td {
+    padding: 9px 12px; border-bottom: 1px solid #f3e8ff;
+    font-size: 13px; color: var(--text-dim);
+    max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  tr:hover td { background: #fdf0ff; color: var(--text); }
+  .cat-badge {
+    font-size: 10px; padding: 2px 9px; border-radius: 99px;
+    background: #fce7f3; color: var(--accent2); border: 1px solid #fbcfe8; font-weight: 500;
+  }
+  .count-pill {
+    display: inline-block; background: #f3e8ff; color: var(--accent);
+    border: 1px solid #d8b4fe; font-size: 10px; padding: 1px 9px;
+    border-radius: 99px; margin-left: 8px; font-weight: 600;
+  }
+
+  /* ── EXPLAIN PANEL ── */
+  .plan-box {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'Courier New', Courier, monospace;
+  }
+  .plan-header {
+    padding: 8px 14px;
+    border-bottom: 1px solid #333;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: #111;
+  }
+  .plan-header-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; font-weight: 600; font-family: var(--sans); }
+  .plan-stats { display: flex; gap: 16px; }
+  .plan-stat { font-size: 11px; font-family: var(--sans); color: #888; }
+  .plan-stat span { color: #a78bfa; font-weight: 600; }
+  .plan-node-type {
+    display: inline-block; font-size: 10px; padding: 2px 8px;
+    border-radius: 5px; font-weight: 600; margin-right: 4px;
+  }
+  .node-seq   { background: #fff0ee; color: #c0543a; border: 1px solid #fbc9c0; }
+  .node-idx   { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+  .node-bitmap{ background: #fdf4ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+  .node-sort  { background: #fef0fb; color: #9d174d; border: 1px solid #fbcfe8; }
+  .node-other { background: #f9f0ff; color: var(--text-dim); border: 1px solid var(--border); }
+
+  .plan-tree {
+    padding: 14px 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12.5px;
+    line-height: 1.75;
+    overflow-x: auto;
+    max-height: 560px;
+    overflow-y: auto;
+    color: #e0e0e0;
+    white-space: pre;
+  }
+  .plan-line-node   { color: #ffffff; font-weight: 500; }
+  .plan-line-detail { color: #aaaaaa; }
+  .plan-line-timing { color: #888888; }
+  .plan-line-footer { color: #666666; font-style: italic; }
+  .plan-kw    { color: #7dd3fc; } /* node type keyword */
+  .plan-cost  { color: #d4d4d4; }
+  .plan-actual{ color: #86efac; }
+  .plan-rows-removed { color: #fca5a5; }
+  .plan-filter{ color: #fcd34d; }
+  .plan-index { color: #c4b5fd; }
+  .plan-time  { color: #6ee7b7; font-weight: 600; }
+  .misestimate { color: #f87171; font-weight: 600; }
+  .goodestimate { color: #86efac; font-weight: 500; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* ── STATUS ── */
+  .status { padding: 10px 14px; border-radius: 8px; font-size: 12.5px; border: 1px solid; font-weight: 500; }
+  .status-ok   { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+  .status-warn { background: #fff7ed; border-color: #fde68a; color: #92400e; }
+  .status-info { background: #f3e8ff; border-color: #d8b4fe; color: var(--accent); }
+  .status-err  { background: #fff0f2; border-color: #fecdd3; color: var(--red); }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-full { grid-column: 1 / -1; }
+  textarea {
+    background: #fdf6ff; border: 1.5px solid var(--border); color: var(--text);
+    padding: 8px 12px; border-radius: 8px; font-family: var(--sans); font-size: 13px;
+    outline: none; resize: vertical; width: 100%; transition: border-color .2s;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(155,93,229,.15); }
+
+  /* ── EXPERIMENT ── */
+  .exp-steps { display: flex; flex-direction: column; gap: 8px; }
+  .exp-step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border: 1.5px solid var(--border); border-radius: 10px;
+    background: #fdf6ff; transition: all .2s;
+  }
+  .exp-step.done { border-color: #86efac; background: #f0fdf4; }
+  .exp-step-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    background: #ead5f5; color: var(--accent); flex-shrink: 0;
+  }
+  .exp-step.done .exp-step-num { background: #dcfce7; color: #15803d; }
+  .exp-step-label { flex: 1; font-size: 13px; color: var(--text-dim); }
+  .exp-step.done .exp-step-label { color: var(--text); }
+
+  /* ── LOADING ── */
+  .loading {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid #ead5f5; border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── INDEX STATUS ── */
+  .idx-list { display: flex; flex-direction: column; gap: 6px; }
+  .idx-item {
+    padding: 9px 13px; background: #fdf6ff; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 12px; color: var(--text-dim);
+  }
+  .idx-item code { color: var(--accent); font-weight: 500; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d8b4fe; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-logo">PostgreSQL CMS </div>
+    <div class="topbar-tag">PostgreSQL 18.3</div>
+    <div class="topbar-right">
+      <div class="index-badge" id="index-status-badge" onclick="openIndexPanel()"> Indexes: checking…</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-section">Queries</div>
+    <div class="nav-item active" onclick="showPanel('list')" id="nav-list">
+      All Posts
+    </div>
+    <div class="nav-item" onclick="showPanel('category')" id="nav-category">
+      By Category
+    </div>
+    <div class="nav-item" onclick="showPanel('daterange')" id="nav-daterange">
+       Date Range
+    </div>
+    <div class="nav-item" onclick="showPanel('search')" id="nav-search">
+      Keyword Search
+    </div>
+
+    <div class="sidebar-section">Write</div>
+    <div class="nav-item" onclick="showPanel('create')" id="nav-create">
+      <span class="nav-icon">+</span> Create Post
+    </div>
+
+    <div class="sidebar-section">Internals</div>
+    <div class="nav-item" onclick="showPanel('indexes')" id="nav-indexes">
+      <span class="nav-icon">⛁</span> Index Manager
+    </div>
+    <div class="nav-item" onclick="showPanel('experiment')" id="nav-experiment">
+      <span class="nav-icon">⚗</span> Stale Stats
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ── ALL POSTS ── -->
+    <section class="panel active" id="panel-list">
+      <div>
+        <div class="panel-title">All Posts</div>
+        <div class="panel-sub">Sequential scan — heap pages read in physical order, sorted in memory</div>
+      </div>
+      <div class="card">
+        <div class="controls">
+          <div class="field">
+            <label>Limit</label>
+            <select id="list-limit">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="explain-toggle" id="list-explain-toggle" onclick="toggleExplain('list')">
+            EXPLAIN ANALYZE
+          </div>
+          <button class="btn btn-primary" onclick="loadPosts()">Run Query</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-title">Results <span id="list-count" class="count-pill"></span></div>
+          <div class="tbl-wrap" id="list-results"></div>
+        </div>
+        <div id="list-plan-col" style="display:none">
+          <div id="list-plan"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── BY CATEGORY ── -->
+    <section class="panel" id="panel-category">
+      <div>
+        <div class="panel-title">Filter by Category</div>
+        <div class="panel-sub">Index scan on (category, published_at DESC) eliminates SeqScan + Sort</div>
+      </div>
+      <div class="card">
+        <div class="controls">
+          <div class="field">
+            <label>Category</label>
+            <select id="cat-select">
+              <option value="database">database</option>
+            </select>
+          </div>
+          <div class="explain-toggle" id="category-explain-toggle" onclick="toggleExplain('category')">
+            EXPLAIN ANALYZE
+          </div>
+          <button class="btn btn-primary" onclick="loadByCategory()">Run Query</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-title">Results <span id="category-count" class="count-pill"></span></div>
+          <div class="tbl-wrap" id="category-results"></div>
+        </div>
+        <div id="category-plan-col" style="display:none">
+          <div id="category-plan"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DATE RANGE ── -->
+    <section class="panel" id="panel-daterange">
+      <div>
+        <div class="panel-title">Filter by Date Range</div>
+        <div class="panel-sub">Intermediate selectivity triggers Bitmap Index Scan → Bitmap Heap Scan</div>
+      </div>
+      <div class="card">
+        <div class="controls">
+          <div class="field">
+            <label>Start Date</label>
+            <input type="date" id="date-start" value="2023-01-01"/>
+          </div>
+          <div class="field">
+            <label>End Date</label>
+            <input type="date" id="date-end" value="2023-12-31"/>
+          </div>
+          <div class="explain-toggle" id="daterange-explain-toggle" onclick="toggleExplain('daterange')">
+            EXPLAIN ANALYZE
+          </div>
+          <button class="btn btn-primary" onclick="loadByDate()">Run Query</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-title">Results <span id="daterange-count" class="count-pill"></span></div>
+          <div class="tbl-wrap" id="daterange-results"></div>
+        </div>
+        <div id="daterange-plan-col" style="display:none">
+          <div id="daterange-plan"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── KEYWORD SEARCH ── -->
+    <section class="panel" id="panel-search">
+      <div>
+        <div class="panel-title">Keyword Search</div>
+        <div class="panel-sub">Always SeqScan</div>
+      </div>
+      <div class="card">
+        <div class="controls">
+          <div class="field">
+            <label>Keyword</label>
+            <input type="text" id="search-q" placeholder="e.g. database" value="database"/>
+          </div>
+          <div class="explain-toggle" id="search-explain-toggle" onclick="toggleExplain('search')">
+            EXPLAIN ANALYZE
+          </div>
+          <button class="btn btn-primary" onclick="loadSearch()">Run Query</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-title">Results <span id="search-count" class="count-pill"></span></div>
+          <div class="tbl-wrap" id="search-results"></div>
+        </div>
+        <div id="search-plan-col" style="display:none">
+          <div id="search-plan"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CREATE ── -->
+    <section class="panel" id="panel-create">
+      <div>
+        <div class="panel-title">Create Post</div>
+      </div>
+      <div class="card" style="max-width:640px">
+        <div class="form-grid">
+          <div class="field form-full">
+            <label>Title</label>
+            <input type="text" id="new-title" placeholder="Post title…"/>
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <select id="new-category">
+              <option>database</option><option>machine-learning</option>
+              <option>web-dev</option><option>security</option>
+              <option>cloud</option><option>devops</option>
+              <option>mobile</option><option>data-science</option>
+              <option>networking</option><option>open-source</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Author</label>
+            <input type="text" id="new-author" placeholder="Author name"/>
+          </div>
+          <div class="field">
+            <label>Published At</label>
+            <input type="date" id="new-date"/>
+          </div>
+          <div class="field form-full">
+            <label>Content</label>
+            <textarea id="new-content" rows="4" placeholder="Post content…"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
+          <button class="btn btn-primary" onclick="createPost()">Insert Post</button>
+          <span id="create-status"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── INDEX MANAGER ── -->
+    <section class="panel" id="panel-indexes">
+      <div>
+        <div class="panel-title">Index Manager</div>
+        <div class="panel-sub">Create or drop B-tree indexes and observe planner changes</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Current Indexes on posts</div>
+        <div id="idx-list" class="idx-list">
+          <div class="empty">Loading…</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Actions</div>
+        <div class="controls">
+          <button class="btn btn-primary" onclick="manageIndex('create')">Create All Indexes</button>
+          <button class="btn btn-danger" onclick="manageIndex('drop')">Drop All Indexes</button>
+          <button class="btn btn-secondary" onclick="manageIndex('analyze')">Run ANALYZE</button>
+          <button class="btn btn-secondary" onclick="loadIndexStatus()">Refresh Status</button>
+        </div>
+        <div id="index-action-result" style="margin-top:12px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Index Definitions</div>
+        <div style="color:var(--text-dim); font-size:12px; line-height:2; font-family:var(--mono)">
+          <div><span style="color:var(--accent2)">idx_posts_category</span> — ON posts(category)</div>
+          <div><span style="color:var(--accent2)">idx_posts_published_at</span> — ON posts(published_at)</div>
+          <div><span style="color:var(--accent2)">idx_posts_cat_pub</span> — ON posts(category, published_at DESC) <span style="color:var(--accent); font-size:10px">← composite; eliminates Sort node</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── STALE STATS EXPERIMENT ── -->
+    <section class="panel" id="panel-experiment">
+      <div>
+        <div class="panel-title">Stale Statistics Lab</div>
+        <div class="panel-sub">Observe planner misestimation before and after ANALYZE</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Experiment Steps</div>
+        <div class="exp-steps">
+          <div class="exp-step" id="exp-step-1">
+            <div class="exp-step-num">1</div>
+            <div class="exp-step-label">Bulk-insert 50,000 rows for 'new-category' (no ANALYZE)</div>
+            <button class="btn btn-secondary" onclick="runExp('insert')">Run</button>
+          </div>
+          <div class="exp-step" id="exp-step-2">
+            <div class="exp-step-num">2</div>
+            <div class="exp-step-label">Query 'new-category' — observe planner misestimation</div>
+            <button class="btn btn-secondary" onclick="runExp('query_before')">Run EXPLAIN</button>
+          </div>
+          <div class="exp-step" id="exp-step-3">
+            <div class="exp-step-num">3</div>
+            <div class="exp-step-label">Run ANALYZE — refresh planner statistics</div>
+            <button class="btn btn-warn" onclick="runExp('analyze')">Run ANALYZE</button>
+          </div>
+          <div class="exp-step" id="exp-step-4">
+            <div class="exp-step-num">4</div>
+            <div class="exp-step-label">Query again — verify corrected estimate</div>
+            <button class="btn btn-secondary" onclick="runExp('query_after')">Run EXPLAIN</button>
+          </div>
+        </div>
+      </div>
+      <div id="exp-status" style="display:none"></div>
+      <div id="exp-plans" class="split"></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const explainState = {};
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'indexes') loadIndexStatus();
+  if (name === 'category') loadCategories();
+}
+
+function openIndexPanel() { showPanel('indexes'); }
+
+// ── EXPLAIN TOGGLE ───────────────────────────────────────────────────────────
+
+function toggleExplain(key) {
+  explainState[key] = !explainState[key];
+  const el = document.getElementById(key + '-explain-toggle');
+  el.classList.toggle('on', explainState[key]);
+}
+
+// ── RENDER TABLE ─────────────────────────────────────────────────────────────
+
+function renderTable(rows, targetId, countId) {
+  const el = document.getElementById(targetId);
+  const countEl = document.getElementById(countId);
+  if (countEl) countEl.textContent = rows.length;
+  if (!rows.length) { el.innerHTML = '<div class="empty">No results found.</div>'; return; }
+  const cols = Object.keys(rows[0]);
+  el.innerHTML = `
+    <table>
+      <thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => `<tr>${cols.map(c => {
+        const v = r[c] ?? '';
+        if (c === 'category') return `<td><span class="cat-badge">${v}</span></td>`;
+        return `<td title="${v}">${v}</td>`;
+      }).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// ── RENDER EXPLAIN ────────────────────────────────────────────────────────────
+
+function renderPlan(plan, targetId, colId) {
+  const col = document.getElementById(colId);
+  const el  = document.getElementById(targetId);
+  if (!plan) { col.style.display = 'none'; return; }
+  col.style.display = '';
+
+  const root     = plan['Plan'];
+  const planTime = plan['Planning Time']?.toFixed(3) ?? '—';
+  const execTime = plan['Execution Time']?.toFixed(3) ?? '—';
+
+  function esc(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function colorLine(raw) {
+    // Node type line: starts with optional arrows/spaces then a capitalized word
+    // Highlight node type keywords in light blue, cost in grey, actual in green
+    return raw
+      .replace(/^(\s*-&gt;\s*)/, '<span style="color:#555">$1</span>')
+      .replace(/(Sort|Seq Scan|Index Scan|Index Only Scan|Bitmap Heap Scan|Bitmap Index Scan|Hash Join|Nested Loop|Merge Join|Aggregate|Gather|Hash|Materialize|Limit|Unique|Append|Result)(?=\s+\()/g,
+        '<span class="plan-kw">$1</span>')
+      .replace(/(on\s+\w+)/g, '<span style="color:#fcd34d">$1</span>')
+      .replace(/(cost=[\d.]+\.\.[\d.]+)/g, '<span class="plan-cost">$1</span>')
+      .replace(/(rows=\d+)/g, '<span class="plan-cost">$1</span>')
+      .replace(/(width=\d+)/g, '<span class="plan-cost">$1</span>')
+      .replace(/(\(actual time=[\d.]+\.\.[\d.]+ rows=\d+ loops=\d+\))/g,
+        '<span class="plan-actual">$1</span>')
+      .replace(/(Filter:.*)/g, '<span class="plan-filter">$1</span>')
+      .replace(/(Index Cond:.*)/g, '<span class="plan-index">$1</span>')
+      .replace(/(Recheck Cond:.*)/g, '<span class="plan-index">$1</span>')
+      .replace(/(Sort Key:.*)/g, '<span style="color:#93c5fd">$1</span>')
+      .replace(/(Sort Method:.*)/g, '<span style="color:#93c5fd">$1</span>')
+      .replace(/(Rows Removed.*)/g, '<span class="plan-rows-removed">$1</span>')
+      .replace(/(Buffers:.*)/g, '<span style="color:#888">$1</span>')
+      .replace(/(Planning Time:.*)/g, '<span class="plan-time">$1</span>')
+      .replace(/(Execution Time:.*)/g, '<span class="plan-time">$1</span>');
+  }
+
+  // Recursively flatten the JSON plan into psql-style text lines
+  function flattenNode(node, depth, lines) {
+    const indent = '  '.repeat(depth);
+    const arrow  = depth === 0 ? '' : '->';
+    const prefix = depth === 0 ? '' : '  '.repeat(depth - 1) + '  -> ';
+
+    const type    = node['Node Type'] || '';
+    const rel     = node['Relation Name'] ? ` on ${node['Relation Name']}${node['Alias'] && node['Alias'] !== node['Relation Name'] ? ' ' + node['Alias'] : ''}` : '';
+    const idxName = node['Index Name'] ? ` on ${node['Index Name']}` : '';
+    const cost    = `(cost=${node['Startup Cost']?.toFixed(2)}..${node['Total Cost']?.toFixed(2)} rows=${node['Plan Rows']} width=${node['Plan Width']})`;
+    const actual  = node['Actual Total Time'] != null
+      ? ` (actual time=${node['Actual Startup Time']?.toFixed(3)}..${node['Actual Total Time']?.toFixed(3)} rows=${node['Actual Rows']} loops=${node['Actual Loops']})`
+      : '';
+
+    lines.push(prefix + type + rel + idxName + '  ' + cost + actual);
+
+    if (node['Index Cond'])             lines.push(indent + '        Index Cond: ' + node['Index Cond']);
+    if (node['Recheck Cond'])           lines.push(indent + '        Recheck Cond: ' + node['Recheck Cond']);
+    if (node['Filter'])                 lines.push(indent + '        Filter: ' + node['Filter']);
+    if (node['Rows Removed by Filter'] != null)
+                                        lines.push(indent + '        Rows Removed by Filter: ' + node['Rows Removed by Filter']);
+    if (node['Sort Key'])               lines.push(indent + '        Sort Key: ' + node['Sort Key'].join(', '));
+    if (node['Sort Method'])            lines.push(indent + '        Sort Method: ' + node['Sort Method'] + (node['Sort Space Used'] ? '  Memory: ' + node['Sort Space Used'] + 'kB' : ''));
+    if (node['Hash Cond'])              lines.push(indent + '        Hash Cond: ' + node['Hash Cond']);
+    if (node['Join Filter'])            lines.push(indent + '        Join Filter: ' + node['Join Filter']);
+
+    // Buffers
+    const bHit  = node['Shared Hit Blocks'];
+    const bRead = node['Shared Read Blocks'];
+    if (bHit != null || bRead != null) {
+      const parts = [];
+      if (bHit)  parts.push('shared hit=' + bHit);
+      if (bRead) parts.push('read=' + bRead);
+      lines.push(indent + '        Buffers: ' + parts.join(' '));
+    }
+
+    if (node.Plans) {
+      for (const child of node.Plans) flattenNode(child, depth + 1, lines);
+    }
+  }
+
+  const lines = [];
+  flattenNode(root, 0, lines);
+  lines.push(' Planning Time: ' + planTime + ' ms');
+  lines.push(' Execution Time: ' + execTime + ' ms');
+
+  const divider = '-'.repeat(90);
+  const colored = [divider, ...lines.map(l => colorLine(esc(l))), divider].join('\n');
+
+  el.innerHTML = `
+    <div class="plan-box">
+      <div class="plan-header">
+        <span class="plan-header-title">QUERY PLAN</span>
+        <div class="plan-stats">
+          <div class="plan-stat">Planning: <span>${planTime} ms</span></div>
+          <div class="plan-stat">Execution: <span>${execTime} ms</span></div>
+        </div>
+      </div>
+      <div class="plan-tree">${colored}</div>
+    </div>`;
+}
+
+// ── QUERIES ──────────────────────────────────────────────────────────────────
+
+async function loadPosts() {
+  const limit = document.getElementById('list-limit').value;
+  const exp = explainState['list'] ? '&explain=1' : '';
+  const res = await fetch(`/api/posts?limit=${limit}${exp}`);
+  const data = await res.json();
+  renderTable(data.rows, 'list-results', 'list-count');
+  renderPlan(data.plan, 'list-plan', 'list-plan-col');
+}
+
+async function loadCategories() {
+  const res = await fetch('/api/posts/categories');
+  const cats = await res.json();
+  const sel = document.getElementById('cat-select');
+  sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+async function loadByCategory() {
+  const cat = document.getElementById('cat-select').value;
+  const exp = explainState['category'] ? '?explain=1' : '';
+  const res = await fetch(`/api/posts/category/${encodeURIComponent(cat)}${exp}`);
+  const data = await res.json();
+  renderTable(data.rows, 'category-results', 'category-count');
+  renderPlan(data.plan, 'category-plan', 'category-plan-col');
+}
+
+async function loadByDate() {
+  const start = document.getElementById('date-start').value;
+  const end = document.getElementById('date-end').value;
+  const exp = explainState['daterange'] ? '&explain=1' : '';
+  const res = await fetch(`/api/posts/date-range?start=${start}&end=${end}${exp}`);
+  const data = await res.json();
+  renderTable(data.rows, 'daterange-results', 'daterange-count');
+  renderPlan(data.plan, 'daterange-plan', 'daterange-plan-col');
+}
+
+async function loadSearch() {
+  const q = document.getElementById('search-q').value;
+  const exp = explainState['search'] ? '&explain=1' : '';
+  const res = await fetch(`/api/posts/search?q=${encodeURIComponent(q)}${exp}`);
+  const data = await res.json();
+  renderTable(data.rows, 'search-results', 'search-count');
+  renderPlan(data.plan, 'search-plan', 'search-plan-col');
+}
+
+async function createPost() {
+  const statusEl = document.getElementById('create-status');
+  statusEl.innerHTML = '<span class="loading"></span>';
+  const body = {
+    title: document.getElementById('new-title').value,
+    category: document.getElementById('new-category').value,
+    author: document.getElementById('new-author').value,
+    published_at: document.getElementById('new-date').value || undefined,
+    content: document.getElementById('new-content').value,
+  };
+  try {
+    const res = await fetch('/api/posts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    statusEl.innerHTML = `<span class="status status-ok">✓ Inserted with id=${data.id}</span>`;
+  } catch(e) {
+    statusEl.innerHTML = `<span class="status status-err">Error: ${e.message}</span>`;
+  }
+}
+
+// ── INDEX MANAGER ─────────────────────────────────────────────────────────────
+
+async function loadIndexStatus() {
+  const res = await fetch('/api/indexes/status');
+  const indexes = await res.json();
+  const el = document.getElementById('idx-list');
+  const badge = document.getElementById('index-status-badge');
+  const custom = indexes.filter(i => !i.indexname.includes('pkey'));
+  badge.textContent = `Indexes: ${custom.length} custom`;
+  badge.className = 'index-badge ' + (custom.length > 0 ? 'active' : '');
+  if (!indexes.length) { el.innerHTML = '<div class="empty">No indexes found.</div>'; return; }
+  el.innerHTML = indexes.map(i =>
+    `<div class="idx-item"><code>${i.indexname}</code> — ${i.indexdef}</div>`
+  ).join('');
+}
+
+async function manageIndex(action) {
+  const resultEl = document.getElementById('index-action-result');
+  resultEl.innerHTML = '<span class="loading"></span> Running…';
+  const res = await fetch('/api/indexes', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action})
+  });
+  const data = await res.json();
+  resultEl.innerHTML = data.results.map(r =>
+    `<div class="status status-ok" style="margin-top:4px">✓ ${r}</div>`
+  ).join('');
+  loadIndexStatus();
+}
+
+// ── STALE STATS EXPERIMENT ───────────────────────────────────────────────────
+
+let beforePlan = null, afterPlan = null;
+
+async function runExp(phase) {
+  const statusEl = document.getElementById('exp-status');
+  statusEl.style.display = '';
+  statusEl.innerHTML = `<div class="status status-info"><span class="loading"></span> Running phase: ${phase}…</div>`;
+
+  const res = await fetch('/api/experiment/stale-stats', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({phase})
+  });
+  const data = await res.json();
+
+  if (data.message) {
+    statusEl.innerHTML = `<div class="status status-ok">✓ ${data.message}</div>`;
+    const stepMap = {insert:1, analyze:3};
+    const step = stepMap[phase];
+    if (step) document.getElementById(`exp-step-${step}`).classList.add('done');
+  }
+
+  if (data.plan) {
+    const stepMap = {query_before:2, query_after:4};
+    const step = stepMap[phase];
+    if (step) document.getElementById(`exp-step-${step}`).classList.add('done');
+
+    if (phase === 'query_before') beforePlan = data.plan;
+    if (phase === 'query_after') afterPlan = data.plan;
+
+    statusEl.innerHTML = `<div class="status status-info">Plan captured — see comparison below</div>`;
+    renderExpPlans();
+  }
+}
+
+function renderExpPlans() {
+  const el = document.getElementById('exp-plans');
+  el.innerHTML = '';
+
+  function makePlanBox(plan, label, color) {
+    if (!plan) return '';
+    const root = plan['Plan'];
+    const planTime = plan['Planning Time']?.toFixed(2) ?? '—';
+    const execTime = plan['Execution Time']?.toFixed(2) ?? '—';
+    const est = root?.['Plan Rows'] ?? 0;
+    const act = root?.['Actual Rows'] ?? 0;
+    const nodeType = root?.['Node Type'] ?? '';
+    const ratio = est > 0 ? act / est : 0;
+    const isMisest = (ratio < 0.1 || ratio > 10) && act > 0;
+
+    return `<div class="card">
+      <div class="card-title" style="color:${color}">${label}</div>
+      <div class="plan-box">
+        <div class="plan-header">
+          <span class="plan-header-title">${nodeType}</span>
+          <div class="plan-stats">
+            <div class="plan-stat">Exec: <span>${execTime} ms</span></div>
+          </div>
+        </div>
+        <div class="plan-tree">
+          <div class="plan-node">
+            <span class="plan-node-type ${isMisest ? 'node-seq' : 'node-idx'}">${nodeType}</span>
+            <span class="plan-node-cost">
+              est=<span class="${isMisest ? 'misestimate' : 'goodestimate'}">${est}</span>
+              act=<span>${act}</span>
+              ${isMisest ? '<span class="misestimate"> ← MISESTIMATE</span>' : '<span class="goodestimate"> ← CORRECT</span>'}
+            </span>
+          </div>
+          <div style="margin-top:8px; color:var(--text-dim); font-size:11px">
+            Plan time: ${planTime} ms &nbsp;|&nbsp; Exec time: ${execTime} ms
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML =
+    makePlanBox(beforePlan, 'Before ANALYZE — Stale Statistics', 'var(--warn)') +
+    makePlanBox(afterPlan, 'After ANALYZE — Corrected Statistics', 'var(--accent)');
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadIndexStatus();
+  // Set default date for create form
+  document.getElementById('new-date').value = new Date().toISOString().split('T')[0];
+});
+</script>
+</body>
+</html>
