@@ -201,24 +201,9 @@ You do not need to upload or download any dataset file — running `python proje
 
 ```
 dsci551_dbproject/
-├── app.py              # Flask backend — all API routes and database logic
-├── project_db.py       # Synthetic dataset generator (100,000 rows via Faker)
+├── app.py              # Flask backend: all API routes and database logic
+├── project_db.py       # Synthetic dataset generator
 ├── templates/
-│   └── index.html      # Single-page frontend with EXPLAIN ANALYZE rendering
+│   └── index.html      # Single-page frontend
 └── README.md           # This file
 ```
-
-### API Routes
-
-| Method | Route | Description |
-|---|---|---|
-| GET | `/` | Serves the frontend |
-| GET | `/api/posts` | List all posts |
-| GET | `/api/posts/category/<cat>` | Filter by category |
-| GET | `/api/posts/date-range` | Filter by date range |
-| GET | `/api/posts/search` | Keyword search |
-| POST | `/api/posts` | Create a new post |
-| GET | `/api/posts/categories` | List all distinct categories |
-| GET | `/api/indexes/status` | List current indexes on posts table |
-| POST | `/api/indexes` | Create / drop indexes / run ANALYZE |
-| POST | `/api/experiment/stale-stats` | Run stale statistics experiment phases |
